@@ -19,6 +19,15 @@ class XLIFFEntity(VCSTranslation):
         self.unit = unit
         self.strings = {None: self.target_string} if self.target_string else {}
 
+        self.fuzzy = False
+        target = unit.xmlelement.find(unit.namespaced("target"))
+        if (
+            target is not None
+            and "state" in target.attrib
+            and target.attrib["state"] == "needs-translation"
+        ):
+            self.fuzzy = True
+
     @property
     def key(self):
         return self.unit.getid()
@@ -39,14 +48,6 @@ class XLIFFEntity(VCSTranslation):
     def comments(self):
         notes = self.unit.getnotes()
         return notes.split("\n") if notes else []
-
-    @property
-    def fuzzy(self):
-        return False
-
-    @fuzzy.setter
-    def fuzzy(self, fuzzy):
-        pass  # We don't use fuzzy in XLIFF
 
     @property
     def source(self):
@@ -82,9 +83,11 @@ class XLIFFEntity(VCSTranslation):
         if "approved" in xml.attrib:
             del xml.attrib["approved"]
 
-        # Clear unused state tag
-        if target is not None and "state" in target.attrib:
-            del target.attrib["state"]
+        if target is not None:
+            if self.fuzzy:
+                target.attrib["state"] = "needs-translation"
+            elif "state" in target.attrib:
+                del target.attrib["state"]
 
 
 class XLIFFResource(ParsedResource):
